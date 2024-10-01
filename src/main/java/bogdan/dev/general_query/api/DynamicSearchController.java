@@ -35,8 +35,14 @@ public class DynamicSearchController {
     }
 
     @GetMapping("/metadata")
-    public Map<String, List<String>> getAllTablesAndColumns(@RequestParam(defaultValue = "false") boolean only_tables) throws SQLException {
-        return dynamicSearchService.getAllTablesAndColumns(only_tables);
+    public Object getAllTablesAndColumns(@RequestParam(defaultValue = "false") boolean only_tables) throws SQLException {
+        if (only_tables) {
+            // Return a list of table names
+            return dynamicSearchService.getAllTableNames();
+        } else {
+            // Return a map of tables and columns
+            return dynamicSearchService.getAllTablesAndColumns();
+        }
     }
 
 }

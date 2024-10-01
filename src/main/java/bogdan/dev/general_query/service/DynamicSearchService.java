@@ -150,27 +150,36 @@ public class DynamicSearchService {
         return columnTypes;
     }
 
-    public Map<String, List<String>> getAllTablesAndColumns(boolean onlyTables) throws SQLException {
+    public List<String> getAllTableNames() throws SQLException {
+        List<String> tableNames = new ArrayList<>();
+        DatabaseMetaData metaData = jdbcTemplate.getDataSource().getConnection().getMetaData();
+
+        try (ResultSet tables = metaData.getTables(null, null, "%", new String[]{"TABLE"})) {
+            while (tables.next()) {
+                String tableName = tables.getString("TABLE_NAME");
+                tableNames.add(tableName);
+            }
+        }
+        return tableNames;
+    }
+
+    // Updated method to get tables and their columns
+    public Map<String, List<String>> getAllTablesAndColumns() throws SQLException {
         Map<String, List<String>> tableColumnsMap = new HashMap<>();
         DatabaseMetaData metaData = jdbcTemplate.getDataSource().getConnection().getMetaData();
 
         try (ResultSet tables = metaData.getTables(null, null, "%", new String[]{"TABLE"})) {
             while (tables.next()) {
                 String tableName = tables.getString("TABLE_NAME");
+                List<String> columns = new ArrayList<>();
 
-                if (onlyTables) {
-                    // If only table names are requested, add an empty list for columns
-                    tableColumnsMap.put(tableName, new ArrayList<>());
-                } else {
-                    List<String> columns = new ArrayList<>();
-                    try (ResultSet columnsResultSet = metaData.getColumns(null, null, tableName, null)) {
-                        while (columnsResultSet.next()) {
-                            String columnName = columnsResultSet.getString("COLUMN_NAME");
-                            columns.add(columnName);
-                        }
+                try (ResultSet columnsResultSet = metaData.getColumns(null, null, tableName, null)) {
+                    while (columnsResultSet.next()) {
+                        String columnName = columnsResultSet.getString("COLUMN_NAME");
+                        columns.add(columnName);
                     }
-                    tableColumnsMap.put(tableName, columns);
                 }
+                tableColumnsMap.put(tableName, columns);
             }
         }
         return tableColumnsMap;
