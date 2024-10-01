@@ -9,6 +9,8 @@ A Spring Boot application that dynamically searches across specified database ta
 - **Flexible Column Filtering:** Use specific column filters to retrieve precise results.
 - **Supports Multiple Databases:** Compatible with MySQL and PostgreSQL databases.
 - **Scalable Architecture:** Business logic separated into service layer (`DynamicSearchService`).
+- **Pagination:** Supports pagination to manage large datasets efficiently.
+
 
 ## Project Structure
 
@@ -59,6 +61,9 @@ Swagger URL:
 ```url
 http://localhost:8080/swagger-ui/index.html
 ```
+
+URL:
+```http://localhost:8080/search```
 
 - Example 1:
 
@@ -117,46 +122,64 @@ http://localhost:8080/swagger-ui/index.html
 }
 ```
 
+URL:
+```http://localhost:8080/search?page=0&size=3```
+
+- Example 1:
+
+```code
+{
+    "tables": ["departments"],
+    "filters": [
+        {
+            "created_date": "2020-01-01"
+        }
+    ]
+}
+```
+
+- Example 2:
+
+```code
+
+```
+
+
+- Example 3:
+
+```code
+
+```
+
+
+- Example 4:
+
+```code
+
+```
+
+
 ## Code Overview
 
 ### **DynamicSearchController**
 - Handles the `/search` endpoint.
 - Delegates the search logic to the `DynamicSearchService`.
 - Uses `@RestController` to expose the endpoint for handling HTTP POST requests.
+- Supports pagination using `page` and `size` query parameters.
+- Combines the results from multiple tables and applies pagination in-memory on the combined result set.
 
 ### **DynamicSearchService**
 - Contains the `executeDynamicQuery` method, which dynamically constructs SQL queries based on the provided filters and table names.
 - Uses `JdbcTemplate` to interact with the database directly.
 - Retrieves the metadata of each table to identify column names and their data types.
 - Builds a dynamic SQL query to support:
-   - Wildcard searches across all columns using the `"ALL_COLUMNS"` filter.
-   - Specific column-based filtering with appropriate operators (`LIKE` for string columns, `=` for numeric columns).
+    - Wildcard searches across all columns using the `"ALL_COLUMNS"` filter.
+    - Specific column-based filtering with appropriate operators (`LIKE` for string columns, `=` for numeric columns, etc.).
 - Handles type conversion for columns to prevent SQL errors (e.g., casting strings to numbers for numeric columns).
+- Supports various data types (`STRING`, `INTEGER`, `DATE`, `BOOLEAN`) in filters.
 
 ### **SearchRequest Model**
 - Represents the structure of the incoming JSON request.
 - Contains:
-   - `tables`: A list of table names to query.
-   - `filters`: A list of conditions to apply on the columns, supporting both specific column filters and wildcard searches across all columns.
-
-## Troubleshooting
-
-- **SQL Errors:** Ensure that the table names and column names provided in the filters match those in the database schema. Also, ensure that the data type in filters (e.g., IDs) matches the column's data type in the database.
-- **Database Connection Issues:** Double-check the database connection details in the `application.properties` file to ensure they point to the correct database.
-- **Data Type Compatibility:** When using numeric filters, make sure the values are passed as numbers (e.g., `1` instead of `"1"`). The service automatically attempts to convert values based on column types.
-
-## To Do
-
-- Add support for other data types (e.g., `DATE`, `BOOLEAN`) to handle more complex queries.
-- Implement pagination to manage large datasets efficiently.
-- Add unit and integration tests to enhance code reliability and ensure correct functionality.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
-
-## Contributing
-
-Contributions are welcome! Please fork this repository and create a pull request for any feature additions, bug fixes, or improvements.
-
----
+    - `tables`: A list of table names to query.
+    - `filters`: A list of conditions to apply on the columns, supporting both specific column filters and wildcard searches across all columns.

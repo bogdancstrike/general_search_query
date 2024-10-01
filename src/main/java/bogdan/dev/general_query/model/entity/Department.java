@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Date;
+
 @Entity
 @Table(name = "departments")
 @Data
@@ -18,4 +20,9 @@ public class Department {
     private String departmentName;
 
     private Integer departmentEmployeesNumber;
+
+    @Temporal(TemporalType.DATE)
+    private Date createdDate;
+
+    private Boolean isActive;
 }
