@@ -52,6 +52,7 @@ public class DynamicSearchService {
         params.add(page * size);
 
         // Execute the query
+        System.out.println(sql.toString());
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
 
@@ -64,7 +65,10 @@ public class DynamicSearchService {
                 String wildcardValue = filter.get("ALL_COLUMNS").toString();
                 List<String> wildcardConditions = new ArrayList<>();
                 for (String column : columnTypes.keySet()) {
-                    addConditionForColumn(column, wildcardValue, columnTypes.get(column), wildcardConditions, params);
+                    // Add condition only if it was successfully processed and is a valid column type for wildcard search
+                    if (addConditionForColumn(column, wildcardValue, columnTypes.get(column), wildcardConditions, params, true)) {
+                        continue;
+                    }
                 }
                 if (!wildcardConditions.isEmpty()) {
                     conditions.add("(" + String.join(" OR ", wildcardConditions) + ")");
@@ -80,7 +84,8 @@ public class DynamicSearchService {
                         continue;
                     }
 
-                    addConditionForColumn(column, value, columnTypes.get(column), conditions, params);
+                    // Add condition only if it was successfully processed
+                    addConditionForColumn(column, value, columnTypes.get(column), conditions, params, false);
                 }
             }
         }
@@ -88,28 +93,36 @@ public class DynamicSearchService {
         return conditions;
     }
 
-    private void addConditionForColumn(String column, Object value, int columnType, List<String> conditions, List<Object> params) {
+
+    private boolean addConditionForColumn(String column, Object value, int columnType, List<String> conditions, List<Object> params, boolean isWildcardSearch) {
         try {
             if (columnType == java.sql.Types.VARCHAR || columnType == java.sql.Types.CHAR || columnType == java.sql.Types.LONGVARCHAR) {
                 conditions.add(column + " LIKE ?");
                 params.add("%" + value + "%");
-            } else if (columnType == java.sql.Types.INTEGER || columnType == java.sql.Types.BIGINT) {
-                conditions.add(column + " = ?");
-                params.add(Long.parseLong(value.toString()));
-            } else if (columnType == java.sql.Types.FLOAT || columnType == java.sql.Types.DOUBLE || columnType == java.sql.Types.NUMERIC) {
-                conditions.add(column + " = ?");
-                params.add(Double.parseDouble(value.toString()));
-            } else if (columnType == java.sql.Types.DATE) {
-                Date dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(value.toString());
-                conditions.add(column + " = ?");
-                params.add(new java.sql.Date(dateValue.getTime()));
-            } else if (columnType == java.sql.Types.BOOLEAN || columnType == java.sql.Types.BIT) {
-                conditions.add(column + " = ?");
-                // Add true/false directly to match PostgreSQL's expectation
-                params.add(Boolean.parseBoolean(value.toString()));
+            } else if (!isWildcardSearch) {  // Only add non-wildcard conditions for numeric, boolean, and date types
+                if (columnType == java.sql.Types.INTEGER || columnType == java.sql.Types.BIGINT) {
+                    conditions.add(column + " = ?");
+                    params.add(Long.parseLong(value.toString()));
+                } else if (columnType == java.sql.Types.FLOAT || columnType == java.sql.Types.DOUBLE || columnType == java.sql.Types.NUMERIC) {
+                    conditions.add(column + " = ?");
+                    params.add(Double.parseDouble(value.toString()));
+                } else if (columnType == java.sql.Types.DATE) {
+                    Date dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(value.toString());
+                    conditions.add(column + " = ?");
+                    params.add(new java.sql.Date(dateValue.getTime()));
+                } else if (columnType == java.sql.Types.BOOLEAN || columnType == java.sql.Types.BIT) {
+                    conditions.add(column + " = ?");
+                    params.add(Boolean.parseBoolean(value.toString()));
+                } else {
+                    return false; // Unsupported column type
+                }
+            } else {
+                return false; // Skip unsupported column types in wildcard search
             }
+            return true; // Successfully added condition and parameter
         } catch (ParseException | NumberFormatException e) {
             // Skip invalid values for the column type
+            return false;
         }
     }
 
