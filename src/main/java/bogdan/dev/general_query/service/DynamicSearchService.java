@@ -34,84 +34,11 @@ public class DynamicSearchService {
         // Build the SQL query
         StringBuilder sql = new StringBuilder("SELECT * FROM ").append(tableName);
         List<Object> params = new ArrayList<>();
+        List<String> conditions = buildQueryConditions(columnTypes, filters, params);
 
-        // Collect conditions for the WHERE clause
-        List<String> conditions = new ArrayList<>();
-
-        if (!filters.isEmpty()) {
-            for (Map<String, Object> filter : filters) {
-                if (filter.containsKey("ALL_COLUMNS")) {
-                    // Wildcard search across all columns
-                    String wildcardValue = filter.get("ALL_COLUMNS").toString();
-                    List<String> wildcardConditions = new ArrayList<>();
-                    for (String column : columnTypes.keySet()) {
-                        int columnType = columnTypes.get(column);
-
-                        // Use LIKE for string columns, = for numeric and other types
-                        if (columnType == java.sql.Types.VARCHAR || columnType == java.sql.Types.CHAR || columnType == java.sql.Types.LONGVARCHAR) {
-                            wildcardConditions.add(column + " LIKE ?");
-                            params.add("%" + wildcardValue + "%");
-                        } else if (columnType == java.sql.Types.INTEGER || columnType == java.sql.Types.BIGINT || columnType == java.sql.Types.FLOAT || columnType == java.sql.Types.DOUBLE || columnType == java.sql.Types.NUMERIC) {
-                            try {
-                                Number numberValue = Double.parseDouble(wildcardValue);
-                                wildcardConditions.add(column + " = ?");
-                                params.add(numberValue);
-                            } catch (NumberFormatException e) {
-                                // Ignore columns that cannot be matched as numbers
-                            }
-                        } else if (columnType == java.sql.Types.DATE) {
-                            try {
-                                Date dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(wildcardValue);
-                                wildcardConditions.add(column + " = ?");
-                                params.add(new java.sql.Date(dateValue.getTime()));
-                            } catch (ParseException e) {
-                                // Ignore invalid date formats
-                            }
-                        } else if (columnType == java.sql.Types.BOOLEAN) {
-                            wildcardConditions.add(column + " = ?");
-                            params.add(Boolean.parseBoolean(wildcardValue));
-                        }
-                    }
-                    if (!wildcardConditions.isEmpty()) {
-                        conditions.add("(" + String.join(" OR ", wildcardConditions) + ")");
-                    }
-                } else {
-                    // Specific column filters
-                    for (Map.Entry<String, Object> entry : filter.entrySet()) {
-                        String column = entry.getKey();
-                        Object value = entry.getValue();
-
-                        // **Check if the column exists in the current table**
-                        if (!columnTypes.containsKey(column)) {
-                            // Skip the filter if the column doesn't exist in the table
-                            continue;
-                        }
-
-                        int columnType = columnTypes.get(column);
-                        if (columnType == java.sql.Types.VARCHAR || columnType == java.sql.Types.CHAR || columnType == java.sql.Types.LONGVARCHAR) {
-                            conditions.add(column + " LIKE ?");
-                            params.add("%" + value + "%");
-                        } else if (columnType == java.sql.Types.INTEGER || columnType == java.sql.Types.BIGINT) {
-                            conditions.add(column + " = ?");
-                            params.add(Long.parseLong(value.toString()));
-                        } else if (columnType == java.sql.Types.FLOAT || columnType == java.sql.Types.DOUBLE || columnType == java.sql.Types.NUMERIC) {
-                            conditions.add(column + " = ?");
-                            params.add(Double.parseDouble(value.toString()));
-                        } else if (columnType == java.sql.Types.DATE) {
-                            try {
-                                Date dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(value.toString());
-                                conditions.add(column + " = ?");
-                                params.add(new java.sql.Date(dateValue.getTime()));
-                            } catch (ParseException e) {
-                                throw new IllegalArgumentException("Invalid date format for column '" + column + "': " + value);
-                            }
-                        } else if (columnType == java.sql.Types.BOOLEAN) {
-                            conditions.add(column + " = ?");
-                            params.add(Boolean.parseBoolean(value.toString()));
-                        }
-                    }
-                }
-            }
+        // Skip the table if no valid conditions were added
+        if (conditions.isEmpty() && !filters.isEmpty()) {
+            return Collections.emptyList();
         }
 
         // Add the WHERE clause if there are any conditions
@@ -128,13 +55,71 @@ public class DynamicSearchService {
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
 
+    private List<String> buildQueryConditions(Map<String, Integer> columnTypes, List<Map<String, Object>> filters, List<Object> params) {
+        List<String> conditions = new ArrayList<>();
+
+        for (Map<String, Object> filter : filters) {
+            if (filter.containsKey("ALL_COLUMNS")) {
+                // Handle wildcard search across all columns
+                String wildcardValue = filter.get("ALL_COLUMNS").toString();
+                List<String> wildcardConditions = new ArrayList<>();
+                for (String column : columnTypes.keySet()) {
+                    addConditionForColumn(column, wildcardValue, columnTypes.get(column), wildcardConditions, params);
+                }
+                if (!wildcardConditions.isEmpty()) {
+                    conditions.add("(" + String.join(" OR ", wildcardConditions) + ")");
+                }
+            } else {
+                // Handle specific column filters
+                for (Map.Entry<String, Object> entry : filter.entrySet()) {
+                    String column = entry.getKey();
+                    Object value = entry.getValue();
+
+                    // Skip non-existent columns for the current table
+                    if (!columnTypes.containsKey(column)) {
+                        continue;
+                    }
+
+                    addConditionForColumn(column, value, columnTypes.get(column), conditions, params);
+                }
+            }
+        }
+
+        return conditions;
+    }
+
+    private void addConditionForColumn(String column, Object value, int columnType, List<String> conditions, List<Object> params) {
+        try {
+            if (columnType == java.sql.Types.VARCHAR || columnType == java.sql.Types.CHAR || columnType == java.sql.Types.LONGVARCHAR) {
+                conditions.add(column + " LIKE ?");
+                params.add("%" + value + "%");
+            } else if (columnType == java.sql.Types.INTEGER || columnType == java.sql.Types.BIGINT) {
+                conditions.add(column + " = ?");
+                params.add(Long.parseLong(value.toString()));
+            } else if (columnType == java.sql.Types.FLOAT || columnType == java.sql.Types.DOUBLE || columnType == java.sql.Types.NUMERIC) {
+                conditions.add(column + " = ?");
+                params.add(Double.parseDouble(value.toString()));
+            } else if (columnType == java.sql.Types.DATE) {
+                Date dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(value.toString());
+                conditions.add(column + " = ?");
+                params.add(new java.sql.Date(dateValue.getTime()));
+            } else if (columnType == java.sql.Types.BOOLEAN || columnType == java.sql.Types.BIT) {
+                conditions.add(column + " = ?");
+                // Add true/false directly to match PostgreSQL's expectation
+                params.add(Boolean.parseBoolean(value.toString()));
+            }
+        } catch (ParseException | NumberFormatException e) {
+            // Skip invalid values for the column type
+        }
+    }
+
     private Map<String, Integer> getTableMetadata(String tableName) throws SQLException {
         // Check the cache first
         if (tableMetadataCache.containsKey(tableName)) {
             return tableMetadataCache.get(tableName);
         }
 
-        // If not cached, retrieve metadata from the database
+        // Retrieve metadata from the database
         Map<String, Integer> columnTypes = new HashMap<>();
         DatabaseMetaData metaData = jdbcTemplate.getDataSource().getConnection().getMetaData();
         try (ResultSet rsColumns = metaData.getColumns(null, null, tableName, null)) {
@@ -163,7 +148,6 @@ public class DynamicSearchService {
         return tableNames;
     }
 
-    // Updated method to get tables and their columns
     public Map<String, List<String>> getAllTablesAndColumns() throws SQLException {
         Map<String, List<String>> tableColumnsMap = new HashMap<>();
         DatabaseMetaData metaData = jdbcTemplate.getDataSource().getConnection().getMetaData();
