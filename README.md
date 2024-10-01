@@ -141,21 +141,54 @@ URL:
 - Example 2:
 
 ```code
-
+{
+    "tables": ["employees"],
+    "filters": [
+        {
+            "is_permanent": true
+        }
+    ]
+}
 ```
 
 
 - Example 3:
 
 ```code
-
+{
+    "tables": ["employees"],
+    "filters": [
+        {
+            "ALL_COLUMNS": "John"
+        },
+        {
+            "is_permanent": true
+        }
+    ]
+}
 ```
 
 
 - Example 4:
 
 ```code
-
+{
+    "tables": ["employees"],
+    "filters": [
+        {
+            "hire_date": "2020-01-01"
+        },
+        {
+            "employee_name": "Employee"
+        },
+        {
+            "is_permanent": true
+        },
+        {
+            "department_id": 1
+        }
+    ]
+}
 ```
 
 

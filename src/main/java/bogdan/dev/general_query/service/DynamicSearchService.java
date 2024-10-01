@@ -40,10 +40,10 @@ public class DynamicSearchService {
         StringBuilder sql = new StringBuilder("SELECT * FROM ").append(tableName);
         List<Object> params = new ArrayList<>();
 
-        if (!filters.isEmpty()) {
-            sql.append(" WHERE ");
-            List<String> conditions = new ArrayList<>();
+        // Collect conditions for the WHERE clause
+        List<String> conditions = new ArrayList<>();
 
+        if (!filters.isEmpty()) {
             for (Map<String, Object> filter : filters) {
                 if (filter.containsKey("ALL_COLUMNS")) {
                     // Wildcard search across all columns
@@ -115,8 +115,11 @@ public class DynamicSearchService {
                     }
                 }
             }
+        }
 
-            sql.append(String.join(" AND ", conditions));
+        // Add the WHERE clause if there are any conditions
+        if (!conditions.isEmpty()) {
+            sql.append(" WHERE ").append(String.join(" AND ", conditions));
         }
 
         // Add pagination
