@@ -48,7 +48,7 @@ spring.jpa.properties.hibernate.format_sql=true
 # ----------------------------------------
 # PostgreSQL Configuration
 # ----------------------------------------
-spring.datasource.url=jdbc:postgresql://192.168.1.140:5432/hera_data
+spring.datasource.url=jdbc:postgresql://192.168.1.140:5432/dev
 spring.datasource.username=postgres
 spring.datasource.password=postgres
 spring.datasource.driver-class-name=org.postgresql.Driver
