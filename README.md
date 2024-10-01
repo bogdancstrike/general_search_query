@@ -12,6 +12,8 @@ designed to work with relational databases such as MySQL and PostgreSQL.
 - **Supports Multiple Databases:** Compatible with MySQL and PostgreSQL databases.
 - **Scalable Architecture:** Business logic separated into service layer (`DynamicSearchService`).
 - **Pagination:** Supports pagination to manage large datasets efficiently.
+- **Metadata Retrieval**: Provides an endpoint to return table names and their columns, with an option to fetch only
+  table names.
 
 ## Project Structure
 
@@ -53,6 +55,8 @@ spring.datasource.driver-class-name=org.postgresql.Driver
    ```
 
 3. **Usage**
+
+- _/search_
 
 **Swagger URL:**
 
@@ -193,11 +197,58 @@ http://localhost:8080/search?page=0&size=3
 }
 ```
 
+- _/metadata_
+
+Retrieves metadata about the tables and columns in the database.
+
+Query Parameters:
+only_tables (default: **false**): When set to true, returns a list of table names only. When set to false, returns a map of table names and their columns.
+
+**only_table = true**
+
+```code
+GET /metadata?only_tables=true
+```
+
+```code
+[
+  "departments",
+  "employees"
+]
+```
+
+**only_table = false**
+
+
+```code
+GET /metadata
+```
+
+```code
+{
+  "departments": [
+    "id",
+    "created_date",
+    "department_employees_number",
+    "department_name",
+    "is_active"
+  ],
+  "employees": [
+    "id",
+    "employee_name",
+    "hire_date",
+    "is_permanent",
+    "department_id"
+  ]
+}
+```
+
 ## Code Overview
 
 ### **DynamicSearchController**
 
 - Handles the `/search` endpoint.
+- Handles the `/metadata` endpoint.
 - Delegates the search logic to the `DynamicSearchService`.
 - Uses `@RestController` to expose the endpoint for handling HTTP POST requests.
 - Supports pagination using `page` and `size` query parameters.
