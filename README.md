@@ -40,11 +40,18 @@ designed to work with relational databases such as MySQL and PostgreSQL.
 
 Open the `src/main/resources/application.properties` file and update the database connection details as follows:
 
-   ```properties
-    # Show SQL statements in the console (useful for debugging)
+```properties
+# ----------------------------------------
+# Database Configuration
+# ----------------------------------------
 spring.jpa.show-sql=true
-# Format SQL statements (makes them more readable in the console)
 spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.hibernate.ddl-auto=update
+```
+
+_Postgres:_
+
+```properties
 # ----------------------------------------
 # PostgreSQL Configuration
 # ----------------------------------------
@@ -52,7 +59,19 @@ spring.datasource.url=jdbc:postgresql://192.168.1.140:5432/dev
 spring.datasource.username=postgres
 spring.datasource.password=postgres
 spring.datasource.driver-class-name=org.postgresql.Driver
-   ```
+  ```
+
+_MySQL:_
+
+```properties
+# ----------------------------------------
+# MySQL Configuration
+# ----------------------------------------
+spring.datasource.url=jdbc:mysql://192.168.1.140:3306/dev
+spring.datasource.username=dev
+spring.datasource.password=dev
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+```
 
 3. **Usage**
 
