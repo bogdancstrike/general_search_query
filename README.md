@@ -29,8 +29,8 @@ A Spring Boot application that dynamically searches across specified database ta
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/your-username/dynamic-database-search-api.git
-   cd dynamic-database-search-api
+   git clone https://github.com/bogdancstrike/general_search_query
+   cd general_search_query
     ```
 
 2. **Configure the Database**
